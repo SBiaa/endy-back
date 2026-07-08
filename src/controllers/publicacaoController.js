@@ -3,7 +3,7 @@
 // A consistência tipo<->campo não é travada no schema, então é validada aqui.
 
 const prisma = require('../lib/prisma');
-const { professorVinculadoATurma, alunoIdsDoResponsavel } = require('../lib/vinculos');
+const { professorVinculadoATurma, alunoIdsDoResponsavel, turmaIdsDoProfessor } = require('../lib/vinculos');
 
 const TIPOS_VALIDOS = ['GERAL', 'TURMA', 'INDIVIDUAL'];
 
@@ -125,7 +125,34 @@ async function listar(req, res) {
         { tipo: 'INDIVIDUAL', alunoId: { in: alunoIds } },
       ];
     }
+  } else if (req.usuario.papel === 'PROFESSOR') {
+    const turmaIds = await turmaIdsDoProfessor(req.usuario.id);
+    const alunos = await prisma.aluno.findMany({
+      where: { turmaId: { in: turmaIds } },
+      select: { id: true },
+    });
+    const alunoIds = alunos.map((a) => a.id);
+
+    if (turmaId && !turmaIds.includes(turmaId)) {
+      return res.status(403).json({ erro: 'Sem permissão para ver publicações dessa turma' });
+    }
+
+    if (alunoId && !alunoIds.includes(alunoId)) {
+      return res.status(403).json({ erro: 'Sem permissão para ver publicações desse aluno' });
+    }
+
+    if (turmaId || alunoId) {
+      if (turmaId) where.turmaId = turmaId;
+      if (alunoId) where.alunoId = alunoId;
+    } else {
+      where.OR = [
+        { tipo: 'GERAL' },
+        { tipo: 'TURMA', turmaId: { in: turmaIds } },
+        { tipo: 'INDIVIDUAL', alunoId: { in: alunoIds } },
+      ];
+    }
   } else {
+    // ADMIN: sem restrição
     if (turmaId) where.turmaId = turmaId;
     if (alunoId) where.alunoId = alunoId;
   }

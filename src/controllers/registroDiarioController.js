@@ -2,7 +2,7 @@
 // RegistroDiario = o form pré-setado, 1 por aluno por dia (@@unique([alunoId, data])).
 
 const prisma = require('../lib/prisma');
-const { professorVinculadoATurma, alunoIdsDoResponsavel } = require('../lib/vinculos');
+const { professorVinculadoATurma, alunoIdsDoResponsavel, turmaIdsDoProfessor } = require('../lib/vinculos');
 
 async function criar(req, res) {
   const {
@@ -75,6 +75,19 @@ async function listar(req, res) {
 
   if (req.usuario.papel === 'RESPONSAVEL') {
     const alunoIds = await alunoIdsDoResponsavel(req.usuario.id);
+
+    if (alunoId && !alunoIds.includes(alunoId)) {
+      return res.status(403).json({ erro: 'Sem permissão para ver registros desse aluno' });
+    }
+
+    where.alunoId = alunoId || { in: alunoIds };
+  } else if (req.usuario.papel === 'PROFESSOR') {
+    const turmaIds = await turmaIdsDoProfessor(req.usuario.id);
+    const alunos = await prisma.aluno.findMany({
+      where: { turmaId: { in: turmaIds } },
+      select: { id: true },
+    });
+    const alunoIds = alunos.map((a) => a.id);
 
     if (alunoId && !alunoIds.includes(alunoId)) {
       return res.status(403).json({ erro: 'Sem permissão para ver registros desse aluno' });
