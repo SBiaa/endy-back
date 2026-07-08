@@ -12,12 +12,12 @@ const {
   deletar,
 } = require('../controllers/turmaController');
 
-router.use(autenticar, exigirPapel('ADMIN'));
+router.use(autenticar);
 
-router.post('/', criar);
+router.post('/', exigirPapel('ADMIN'), criar);
 router.get('/', listar);
 router.get('/:id', buscarPorId);
-router.put('/:id', atualizar);
-router.delete('/:id', deletar);
+router.put('/:id', exigirPapel('ADMIN'), atualizar);
+router.delete('/:id', exigirPapel('ADMIN'), deletar);
 
 module.exports = router;

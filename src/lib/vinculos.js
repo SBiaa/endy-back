@@ -30,4 +30,19 @@ async function turmaIdsDoProfessor(professorId) {
   return turmas.map((t) => t.id);
 }
 
-module.exports = { professorVinculadoATurma, alunoIdsDoResponsavel, turmaIdsDoProfessor };
+async function turmaIdsDoResponsavel(responsavelId) {
+  const alunoIds = await alunoIdsDoResponsavel(responsavelId);
+  const alunos = await prisma.aluno.findMany({
+    where: { id: { in: alunoIds } },
+    select: { turmaId: true },
+  });
+
+  return [...new Set(alunos.map((a) => a.turmaId))];
+}
+
+module.exports = {
+  professorVinculadoATurma,
+  alunoIdsDoResponsavel,
+  turmaIdsDoProfessor,
+  turmaIdsDoResponsavel,
+};
