@@ -1,0 +1,185 @@
+// schema.prisma — Agenda Digital para Creches
+// Stack: PostgreSQL + Prisma v5
+//
+// Decisões travadas:
+//  - "Recados" e "feed" = MESMA entidade (Publicacao com tipo). Feed é só a visão filtrada.
+//  - Um aluno pode ter VÁRIOS responsáveis (M2M via join explícito ResponsavelAluno).
+//  - Um usuário só, com campo `papel` (mesma abordagem de single-table + role).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Papel {
+  RESPONSAVEL
+  PROFESSOR
+  ADMIN
+}
+
+enum TipoPublicacao {
+  GERAL // pra creche inteira
+  TURMA // pra uma turma específica  -> preenche turmaId
+  INDIVIDUAL // pra um aluno específico  -> preenche alunoId
+}
+
+// enums do diário = valores de seleção rápida no form pré-setado
+enum HumorDia {
+  OTIMO
+  BOM
+  AGITADO
+  CHOROSO
+  ADOECIDO
+}
+
+enum QuantidadeRefeicao {
+  TUDO
+  METADE
+  POUCO
+  RECUSOU
+  NAO_SE_APLICA
+}
+
+enum QualidadeSono {
+  DORMIU_BEM
+  DORMIU_POUCO
+  AGITADO
+  NAO_DORMIU
+}
+
+// ==================== USUÁRIO ====================
+// Um só model de usuário, diferenciado pelo `papel`.
+// As relações abaixo só fazem sentido conforme o papel:
+//  - PROFESSOR usa: turmas, publicacoes, registrosDiario
+//  - RESPONSAVEL usa: alunos (via ResponsavelAluno)
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senhaHash String
+  papel     Papel
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // se PROFESSOR:
+  turmas          Turma[]          @relation("ProfessorTurmas") // M2M
+  publicacoes     Publicacao[] // publicações que ele criou (autor)
+  registrosDiario RegistroDiario[] // diários que ele preencheu
+
+  // se RESPONSAVEL:
+  alunos ResponsavelAluno[]
+}
+
+// ==================== TURMA ====================
+
+model Turma {
+  id        String   @id @default(uuid())
+  nome      String // ex: "Berçário II", "Maternal I"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  professores Usuario[]    @relation("ProfessorTurmas") // M2M (assumido)
+  alunos      Aluno[]
+  publicacoes Publicacao[] // publicações do tipo TURMA
+}
+
+// ==================== ALUNO ====================
+
+model Aluno {
+  id             String   @id @default(uuid())
+  nome           String
+  dataNascimento DateTime
+  // perfil básico:
+  alergias       String? // texto livre por ora
+  observacoes    String? // cuidados especiais, restrições...
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  turmaId String
+  turma   Turma  @relation(fields: [turmaId], references: [id], onDelete: NoAction)
+
+  responsaveis    ResponsavelAluno[]
+  publicacoes     Publicacao[] // publicações do tipo INDIVIDUAL
+  registrosDiario RegistroDiario[]
+}
+
+// Join explícito Responsável <-> Aluno (M2M).
+// Explícito (não implícito) pra poder guardar o parentesco.
+model ResponsavelAluno {
+  id            String  @id @default(uuid())
+  responsavelId String
+  alunoId       String
+  parentesco    String? // "mãe", "pai", "avó"... opcional
+
+  responsavel Usuario @relation(fields: [responsavelId], references: [id], onDelete: NoAction)
+  aluno       Aluno   @relation(fields: [alunoId], references: [id], onDelete: NoAction)
+
+  @@unique([responsavelId, alunoId]) // evita vínculo duplicado
+}
+
+// ==================== PUBLICAÇÃO (recados + feed unificados) ====================
+// A consistência tipo<->campo (TURMA exige turmaId, INDIVIDUAL exige alunoId,
+// GERAL não exige nenhum) NÃO dá pra travar 100% no schema — isso a gente
+// valida no controller na hora de criar.
+
+model Publicacao {
+  id        String         @id @default(uuid())
+  tipo      TipoPublicacao
+  conteudo  String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  // autor = professor (ou admin)
+  autorId String
+  autor   Usuario @relation(fields: [autorId], references: [id], onDelete: NoAction)
+
+  // só quando tipo = TURMA
+  turmaId String?
+  turma   Turma?  @relation(fields: [turmaId], references: [id])
+
+  // só quando tipo = INDIVIDUAL
+  alunoId String?
+  aluno   Aluno?  @relation(fields: [alunoId], references: [id])
+}
+
+// ==================== REGISTRO DIÁRIO (o form pré-setado) ====================
+// 1 registro por aluno por dia (por isso @db.Date + @@unique).
+
+model RegistroDiario {
+  id   String   @id @default(uuid())
+  data DateTime @db.Date // só a data (sem hora) -> permite "1 por dia"
+
+  humor HumorDia
+
+  // alimentação por refeição = seleção rápida
+  cafe   QuantidadeRefeicao @default(NAO_SE_APLICA)
+  almoco QuantidadeRefeicao @default(NAO_SE_APLICA)
+  lanche QuantidadeRefeicao @default(NAO_SE_APLICA)
+
+  sono QualidadeSono
+
+  trocasFralda Int? // nº de trocas (útil no berçário)
+  evacuou      Boolean?
+
+  atividades           String? // o que fez no dia
+  materiaisNecessarios String? // "acabando fralda / lenço umedecido"
+  observacoes          String? // qualquer coisa extra pro responsável
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  alunoId String
+  aluno   Aluno  @relation(fields: [alunoId], references: [id], onDelete: NoAction)
+
+  professorId String
+  professor   Usuario @relation(fields: [professorId], references: [id], onDelete: NoAction)
+
+  @@unique([alunoId, data]) // um registro por aluno por dia
+}
