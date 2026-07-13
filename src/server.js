@@ -13,6 +13,7 @@ const responsavelAlunoRoutes = require('./routes/responsavelAlunoRoutes');
 const professorTurmaRoutes = require('./routes/professorTurmaRoutes');
 const publicacaoRoutes = require('./routes/publicacaoRoutes');
 const registroDiarioRoutes = require('./routes/registroDiarioRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 const app = express();
 
 app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
@@ -34,6 +35,7 @@ app.use('/responsavel-aluno', responsavelAlunoRoutes);
 app.use('/professor-turma', professorTurmaRoutes);
 app.use('/publicacoes', publicacaoRoutes);
 app.use('/registros-diario', registroDiarioRoutes);
+app.use('/dashboard', dashboardRoutes);
 app.get('/health/db', async (req, res) => {
   try {
     // conta quantos usuários existem (deve ser 0 por enquanto, banco tá vazio)
