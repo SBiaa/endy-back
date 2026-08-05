@@ -55,6 +55,12 @@ enum QualidadeSono {
   NAO_DORMIU
 }
 
+enum StatusPresenca {
+  PRESENTE
+  AUSENTE
+  JUSTIFICADO
+}
+
 // ==================== USUÁRIO ====================
 // Um só model de usuário, diferenciado pelo `papel`.
 // As relações abaixo só fazem sentido conforme o papel:
@@ -74,6 +80,7 @@ model Usuario {
   turmas          Turma[]          @relation("ProfessorTurmas") // M2M
   publicacoes     Publicacao[] // publicações que ele criou (autor)
   registrosDiario RegistroDiario[] // diários que ele preencheu
+  presencas       Presenca[] // chamadas que ele registrou
 
   // se RESPONSAVEL:
   alunos ResponsavelAluno[]
@@ -110,6 +117,7 @@ model Aluno {
   responsaveis    ResponsavelAluno[]
   publicacoes     Publicacao[] // publicações do tipo INDIVIDUAL
   registrosDiario RegistroDiario[]
+  presencas       Presenca[]
 }
 
 // Join explícito Responsável <-> Aluno (M2M).
@@ -184,4 +192,24 @@ model RegistroDiario {
   professor   Usuario @relation(fields: [professorId], references: [id], onDelete: NoAction)
 
   @@unique([alunoId, data]) // um registro por aluno por dia
+}
+
+// ==================== PRESENÇA (chamada diária) ====================
+// 1 registro de presença por aluno por dia (mesmo padrão do RegistroDiario).
+
+model Presenca {
+  id        String         @id @default(uuid())
+  data      DateTime       @db.Date
+  status    StatusPresenca
+  motivo    String? // usado quando status = JUSTIFICADO
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  alunoId String
+  aluno   Aluno  @relation(fields: [alunoId], references: [id])
+
+  professorId String
+  professor   Usuario @relation(fields: [professorId], references: [id])
+
+  @@unique([alunoId, data])
 }
