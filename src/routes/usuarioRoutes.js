@@ -12,6 +12,7 @@ const {
   buscarPorId,
   atualizar,
   deletar,
+  resetarSenha,
   meuPerfil,
 } = require('../controllers/usuarioController');
 
@@ -25,5 +26,6 @@ router.get('/', exigirPapel('ADMIN'), listar);
 router.get('/:id', exigirPapel('ADMIN'), buscarPorId);
 router.put('/:id', exigirPapel('ADMIN'), validar(usuarioUpdateSchema), atualizar);
 router.delete('/:id', exigirPapel('ADMIN'), deletar);
+router.post('/:id/resetar-senha', exigirPapel('ADMIN'), resetarSenha);
 
 module.exports = router;

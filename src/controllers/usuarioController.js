@@ -134,6 +134,24 @@ async function deletar(req, res) {
   return res.status(204).send();
 }
 
+async function resetarSenha(req, res) {
+  const { id } = req.params;
+
+  const usuarioExistente = await prisma.usuario.findUnique({ where: { id } });
+
+  if (!usuarioExistente) {
+    return res.status(404).json({ erro: 'Usuário não encontrado' });
+  }
+
+  const senhaTemporaria = gerarSenhaTemporaria();
+  const senhaHash = await bcrypt.hash(senhaTemporaria, 10);
+
+  await prisma.usuario.update({ where: { id }, data: { senhaHash } });
+
+  // senhaTemporaria só aparece aqui, nessa resposta — não é salva em texto plano
+  return res.json({ senhaTemporaria });
+}
+
 async function meuPerfil(req, res) {
   const usuario = await prisma.usuario.findUnique({ where: { id: req.usuario.id } });
 
@@ -144,4 +162,4 @@ async function meuPerfil(req, res) {
   return res.json(semSenha(usuario));
 }
 
-module.exports = { criar, listar, buscarPorId, atualizar, deletar, meuPerfil };
+module.exports = { criar, listar, buscarPorId, atualizar, deletar, resetarSenha, meuPerfil };
