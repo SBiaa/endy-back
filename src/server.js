@@ -1,6 +1,14 @@
 // src/server.js
 require('dotenv').config();
 
+const ENV_OBRIGATORIAS = ['DATABASE_URL', 'JWT_SECRET', 'FRONTEND_URL'];
+const faltando = ENV_OBRIGATORIAS.filter((chave) => !process.env[chave]);
+
+if (faltando.length > 0) {
+  console.error(`Variáveis de ambiente obrigatórias não definidas: ${faltando.join(', ')}`);
+  process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -45,6 +53,11 @@ app.get('/health/db', async (req, res) => {
     console.error(erro);
     res.status(500).json({ status: 'erro', mensagem: 'Falha ao conectar no banco' });
   }
+});
+
+app.use((erro, req, res, next) => {
+  console.error(erro);
+  res.status(500).json({ erro: 'Erro interno do servidor' });
 });
 
 const PORTA = process.env.PORT || 3333;

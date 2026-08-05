@@ -128,13 +128,8 @@ async function atualizar(req, res) {
     return res.status(404).json({ erro: 'Registro não encontrado' });
   }
 
-  if (req.usuario.papel === 'PROFESSOR') {
-    const aluno = await prisma.aluno.findUnique({ where: { id: registro.alunoId } });
-    const vinculado = await professorVinculadoATurma(req.usuario.id, aluno.turmaId);
-
-    if (!vinculado) {
-      return res.status(403).json({ erro: 'Você não está vinculado à turma desse aluno' });
-    }
+  if (req.usuario.papel === 'PROFESSOR' && registro.professorId !== req.usuario.id) {
+    return res.status(403).json({ erro: 'Só quem criou o registro pode editá-lo' });
   }
 
   const atualizado = await prisma.registroDiario.update({

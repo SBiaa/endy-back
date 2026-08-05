@@ -97,9 +97,17 @@ async function atualizar(req, res) {
     data.senhaHash = await bcrypt.hash(senha, 10);
   }
 
-  const usuario = await prisma.usuario.update({ where: { id }, data });
+  try {
+    const usuario = await prisma.usuario.update({ where: { id }, data });
 
-  return res.json(semSenha(usuario));
+    return res.json(semSenha(usuario));
+  } catch (erro) {
+    if (erro.code === 'P2002') {
+      return res.status(409).json({ erro: 'Já existe um usuário com esse email' });
+    }
+
+    throw erro;
+  }
 }
 
 async function deletar(req, res) {

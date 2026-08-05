@@ -17,7 +17,7 @@ Stack: Node.js + Express 5 + Prisma 5 + PostgreSQL (hosted on Neon).
 
 There is no test suite, lint config, or build step configured yet.
 
-Env vars (`.env`, not committed): `DATABASE_URL` (Neon Postgres), `JWT_SECRET`, `PORT` (optional, defaults to 3333).
+Env vars (`.env`, not committed): `DATABASE_URL` (Neon Postgres), `JWT_SECRET`, `FRONTEND_URL` (used for CORS), `PORT` (optional, defaults to 3333). The first three are required — `src/server.js` checks for them at boot and exits if any is missing.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ Standard layered Express structure under `src/`:
 - `src/controllers/` — route handlers containing the actual logic (e.g. `authController.js`)
 - `src/middlewares/` — `autenticar.js` (JWT auth, verifies token and populates `req.usuario`) and `exigirPapel.js` (role gate; must run *after* `autenticar` since it reads `req.usuario.papel`)
 
-Note: `autenticar.js` is currently an empty stub — auth middleware is not yet wired into routes. Any route needing protection must have `autenticar` (and optionally `exigirPapel(...)`) added to its router.
+`autenticar.js` and `exigirPapel.js` are fully implemented and wired into every router (each router calls `router.use(autenticar)` and adds `exigirPapel(...)` per-route as needed). Any new route needing protection must have `autenticar` (and optionally `exigirPapel(...)`) added the same way.
 
 ### Data model (`prisma/schema.prisma`)
 
