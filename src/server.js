@@ -22,6 +22,7 @@ const professorTurmaRoutes = require('./routes/professorTurmaRoutes');
 const publicacaoRoutes = require('./routes/publicacaoRoutes');
 const registroDiarioRoutes = require('./routes/registroDiarioRoutes');
 const presencaRoutes = require('./routes/presencaRoutes');
+const cardapioRoutes = require('./routes/cardapioRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/professor-turma', professorTurmaRoutes);
 app.use('/publicacoes', publicacaoRoutes);
 app.use('/registros-diario', registroDiarioRoutes);
 app.use('/presencas', presencaRoutes);
+app.use('/cardapio', cardapioRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.get('/health/db', async (req, res) => {
   try {

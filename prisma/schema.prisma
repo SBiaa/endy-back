@@ -61,6 +61,14 @@ enum StatusPresenca {
   JUSTIFICADO
 }
 
+enum DiaSemana {
+  SEGUNDA
+  TERCA
+  QUARTA
+  QUINTA
+  SEXTA
+}
+
 // ==================== USUÁRIO ====================
 // Um só model de usuário, diferenciado pelo `papel`.
 // As relações abaixo só fazem sentido conforme o papel:
@@ -212,4 +220,18 @@ model Presenca {
   professor   Usuario @relation(fields: [professorId], references: [id])
 
   @@unique([alunoId, data])
+}
+
+// ==================== CARDÁPIO ====================
+// Cardápio único pra creche inteira (não por turma), semanal: um item por
+// dia útil (seg-sex). Só ADMIN edita; qualquer papel autenticado pode ver.
+
+model ItemCardapio {
+  id        String    @id @default(uuid())
+  diaSemana DiaSemana @unique
+  cafe      String?
+  almoco    String?
+  lanche    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
